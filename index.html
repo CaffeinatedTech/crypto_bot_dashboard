@@ -207,10 +207,10 @@
       }, 300000);
 
       // Setup WebSocket connection
-      let socket = new WebSocket(`ws://${window.location.host}/ws`);
+      let socket = new WebSocket(`wss://${window.location.host}/ws`);
 
       function connectWebsocket() {
-        socket = new WebSocket(`ws://${window.location.host}/ws`);
+        socket = new WebSocket(`wss://${window.location.host}/ws`);
       }
 
       // Handle incoming messages from the server
