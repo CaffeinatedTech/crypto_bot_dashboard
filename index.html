@@ -180,31 +180,7 @@
     <div id="dashboard-grid"></div>
 
     <script>
-      let bots = {
-        "BTC/USDT": {
-          name: "BTC/USDT",
-          current_price: 0,
-          next_buy_order: 0,
-          next_sell_order: 0,
-          pnl: 0,
-          profit: 0,
-          trades: 0,
-          status: "connected",
-          last_updated: 0,
-        },
-        "ETH/USDT": {
-          name: "ETH/USDT",
-          current_price: 0,
-          next_buy_order: 0,
-          next_sell_order: 0,
-          pnl: 0,
-          profit: 0,
-          trades: 0,
-          status: "connected",
-          last_updated: 0,
-        },
-      };
-      updateDashboard();
+      let bots = {};
 
       // Setup WebSocket connection
       const wsUrl = `wss://${window.location.host}/ws`;
