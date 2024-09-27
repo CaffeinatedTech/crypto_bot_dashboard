@@ -188,7 +188,7 @@
     </style>
   </head>
   <body>
-    <h1>Grid Bot</h1>
+    <h1>Bot Dashboard</h1>
 
     <!-- Grid layout for displaying bot stats -->
     <div id="dashboard-grid"></div>
@@ -196,44 +196,63 @@
     <script>
       let bots = {};
 
-      // Check each bot's last_updated time every 5 minutes
-      setInterval(() => {
-        Object.keys(bots).forEach((key) => {
-          const bot = bots[key];
-          if (Date.now() - bot.last_updated > 300000) {
-            bots[key]['status'] = 'disconnected'
-          }
-        });
-      }, 300000);
-
       // Setup WebSocket connection
-      let socket = new WebSocket(`wss://${window.location.host}/ws`);
+      const wsUrl = `wss://${window.location.host}:8080/ws`;
+      let socket;
+      let reconnectAttempts = 0;
+      const maxReconnectDelay = 30000; // Maximum delay between reconnect attempts (30 seconds)
 
       function connectWebsocket() {
-        socket = new WebSocket(`wss://${window.location.host}/ws`);
+        if (
+          socket &&
+          (socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING)
+        ) {
+          console.log("WebSocket is already connected or connecting.");
+          return;
+        }
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+          console.log("Connected to WebSocket server");
+          reconnectAttempts = 0; // Reset reconnection attempts on successful connection
+        };
+
+        // Handle incoming messages from the server
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          thisBot = data;
+          thisBot["last_updated"] = Date.now();
+          thisBot["status"] = "connected";
+          bots[thisBot.name] = thisBot;
+          updateDashboard();
+        };
+
+        // Handle errors
+        socket.onerror = (error) => {
+          console.error("Websocket error occurred:", error);
+          reconnectWithBackoff();
+        };
+
+        // Handle connection close
+        socket.onclose = () => {
+          console.log("Disconnected from the WebSocket server");
+          reconnectWithBackoff();
+        };
       }
 
-      // Handle incoming messages from the server
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        thisBot = data;
-        thisBot['last_updated'] = Date.now();
-        thisBot['status'] = 'connected'
-        bots[thisBot.name] = thisBot;
-        updateDashboard();
-      };
+      function reconnectWithBackoff() {
+        const delay = Math.min(
+          1000 * Math.pow(2, reconnectAttempts),
+          maxReconnectDelay,
+        );
+        console.log(`Attempting to reconnect in ${delay}ms...`);
 
-      // Handle errors
-      socket.onerror = (error) => {
-        console.error("Error occurred:", error);
-        connectWebsocket();
-      };
-
-      // Handle connection close
-      socket.onclose = () => {
-        console.log("Disconnected from the WebSocket server");
-        connectWebsocket();
-      };
+        setTimeout(() => {
+          reconnectAttempts++;
+          connectWebsocket();
+        }, delay);
+      }
 
       // Update the dashboard with the latest bot data
       function updateDashboard() {
@@ -244,7 +263,10 @@
           const bot = bots[key];
           const dashboard = document.createElement("div");
           dashboard.className = "dashboard";
-          let priceIndicatorWidth = ((bot.current_price - bot.next_buy_order) / (bot.next_sell_order - bot.next_buy_order)) * 100;
+          let priceIndicatorWidth =
+            ((bot.current_price - bot.next_buy_order) /
+              (bot.next_sell_order - bot.next_buy_order)) *
+            100;
           if (priceIndicatorWidth > 100) {
             priceIndicatorWidth = 100;
           } else if (priceIndicatorWidth < 0) {
@@ -270,6 +292,17 @@
           dashboardGrid.appendChild(dashboard);
         });
       }
+
+      // Check each bot's last_updated time every 5 minutes
+      setInterval(() => {
+        Object.keys(bots).forEach((key) => {
+          const bot = bots[key];
+          if (Date.now() - bot.last_updated > 300000) {
+            bots[key]["status"] = "disconnected";
+          }
+        });
+        updateDashboard();
+      }, 300000);
 
       connectWebsocket();
     </script>
