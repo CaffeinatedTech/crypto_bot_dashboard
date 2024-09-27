@@ -14,18 +14,6 @@
         flex-direction: column;
         align-items: center;
       }
-      #form {
-        margin-bottom: 20px;
-      }
-      input {
-        padding: 10px;
-        font-size: 1rem;
-      }
-      button {
-        padding: 10px 20px;
-        font-size: 1rem;
-        cursor: pointer;
-      }
       #dashboard-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -39,7 +27,7 @@
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         text-align: center;
         position: relative;
-        cursor: move;
+        cursor: default;
       }
       .dashboard .status-indicator {
         width: 15px;
@@ -55,17 +43,31 @@
       .status.disconnected {
         background-color: red;
       }
-      .remove-btn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: none;
-        border: none;
-        cursor: pointer;
-      }
-      .remove-btn img {
+      .grab-handle {
         width: 20px;
         height: 20px;
+        background-color: #ccc;
+        position: absolute;
+        top: 10px;
+        left: 30px;
+        border-radius: 3px;
+        cursor: move;
+        touch-action: none;
+      }
+      .grab-handle::before,
+      .grab-handle::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        right: 5px;
+        height: 2px;
+        background-color: #666;
+      }
+      .grab-handle::before {
+        top: 6px;
+      }
+      .grab-handle::after {
+        bottom: 6px;
       }
       .price,
       .pair,
@@ -82,7 +84,6 @@
       .pair {
         font-weight: bold;
       }
-
       .price-meter {
         width: 100%;
         height: 20px;
@@ -108,27 +109,24 @@
         font-size: 0.9rem;
         margin-top: -15px;
       }
+      .dashboard.dragging {
+        opacity: 0.5;
+      }
+      .dashboard.drag-over {
+        border: 2px dashed #666;
+      }
 
       /* Media query for smaller screens */
       @media (max-width: 768px) {
         body {
           padding: 10px;
         }
-
-        input,
-        button {
-          padding: 8px;
-          font-size: 0.9rem;
-        }
-
         #dashboard-grid {
           gap: 15px;
         }
-
         .dashboard {
           padding: 15px;
         }
-
         .price,
         .pair,
         .profit,
@@ -136,16 +134,13 @@
         .trades {
           font-size: 1rem;
         }
-
         .price-meter {
           margin: 15px 2px;
           height: 15px;
         }
-
         .price-indicator {
           height: 15px;
         }
-
         .meter-labels {
           font-size: 0.8rem;
           margin-top: -10px;
@@ -154,16 +149,9 @@
 
       /* Media query for very small screens (e.g., smartphones) */
       @media (max-width: 480px) {
-        input,
-        button {
-          padding: 6px;
-          font-size: 0.8rem;
-        }
-
         .dashboard {
           padding: 10px;
         }
-
         .price,
         .pair,
         .profit,
@@ -171,53 +159,17 @@
         .trades {
           font-size: 0.9rem;
         }
-
         .price-meter {
           margin: 10px 2px;
           height: 12px;
         }
-
         .price-indicator {
           height: 12px;
         }
-
         .meter-labels {
           font-size: 0.7rem;
           margin-top: -10px;
         }
-      }
-
-      .grab-handle {
-        width: 20px;
-        height: 20px;
-        background-color: #ccc;
-        position: absolute;
-        top: 10px;
-        left: 30px;
-        border-radius: 3px;
-        cursor: grab;
-      }
-
-      .grab-handle::before,
-      .grab-handle::after {
-        content: "";
-        position: absolute;
-        left: 5px;
-        right: 5px;
-        height: 2px;
-        background-color: #666;
-      }
-
-      .grab-handle::before {
-        top: 6px;
-      }
-
-      .grab-handle::after {
-        bottom: 6px;
-      }
-
-      .dashboard.dragging {
-        opacity: 0.5;
       }
     </style>
   </head>
@@ -228,8 +180,31 @@
     <div id="dashboard-grid"></div>
 
     <script>
-      let bots = {};
-      let draggedElement = null;
+      let bots = {
+        "BTC/USDT": {
+          name: "BTC/USDT",
+          current_price: 0,
+          next_buy_order: 0,
+          next_sell_order: 0,
+          pnl: 0,
+          profit: 0,
+          trades: 0,
+          status: "connected",
+          last_updated: 0,
+        },
+        "ETH/USDT": {
+          name: "ETH/USDT",
+          current_price: 0,
+          next_buy_order: 0,
+          next_sell_order: 0,
+          pnl: 0,
+          profit: 0,
+          trades: 0,
+          status: "connected",
+          last_updated: 0,
+        },
+      };
+      updateDashboard();
 
       // Setup WebSocket connection
       const wsUrl = `wss://${window.location.host}/ws`;
@@ -279,7 +254,7 @@
       function reconnectWithBackoff() {
         const delay = Math.min(
           1000 * Math.pow(2, reconnectAttempts),
-          maxReconnectDelay,
+          maxReconnectDelay
         );
         console.log(`Attempting to reconnect in ${delay}ms...`);
 
@@ -298,8 +273,8 @@
           const bot = bots[key];
           const dashboard = document.createElement("div");
           dashboard.className = "dashboard";
-          dashboard.setAttribute("draggable", "true");
           dashboard.setAttribute("data-bot-name", key);
+
           let priceIndicatorWidth =
             ((bot.current_price - bot.next_buy_order) /
               (bot.next_sell_order - bot.next_buy_order)) *
@@ -311,35 +286,54 @@
           }
 
           dashboard.innerHTML = `
-      <div class="status-indicator status ${bot.status}"></div>
-      <div class="grab-handle"></div>
-      <div class="pair">${bot.name}</div>
-      <div class="price">Price: ${bot.current_price}</div>
-      <div class="trades">Trades: ${bot.trades}</div>
-      <div class="profit">Bot Profit: ${bot.profit}</div>
-      <div class="pnl">PnL: ${bot.pnl}</div>
-      <!-- Price meter bar -->
-      <div class="price-meter">
-        <div class="price-indicator" style="width: ${priceIndicatorWidth}%;"></div>
-      </div>
-      <div class="meter-labels">
-        <span class="next-buy">Buy: ${bot.next_buy_order}</span>
-        <span class="next-sell">Sell: ${bot.next_sell_order}</span>
-      </div>
-    `;
+            <div class="status-indicator status ${bot.status}"></div>
+            <div class="grab-handle" draggable="true"></div>
+            <div class="pair">${bot.name}</div>
+            <div class="price">Price: ${bot.current_price}</div>
+            <div class="trades">Trades: ${bot.trades}</div>
+            <div class="profit">Bot Profit: ${bot.profit}</div>
+            <div class="pnl">PnL: ${bot.pnl}</div>
+            <div class="price-meter">
+              <div class="price-indicator" style="width: ${priceIndicatorWidth}%;"></div>
+            </div>
+            <div class="meter-labels">
+              <span class="next-buy">Buy: ${bot.next_buy_order}</span>
+              <span class="next-sell">Sell: ${bot.next_sell_order}</span>
+            </div>
+          `;
+
+          const grabHandle = dashboard.querySelector('.grab-handle');
+          grabHandle.addEventListener("mousedown", enableDragging);
+          grabHandle.addEventListener("touchstart", enableDragging, { passive: false });
+
           dashboard.addEventListener("dragstart", dragStart);
           dashboard.addEventListener("dragover", dragOver);
           dashboard.addEventListener("dragenter", dragEnter);
           dashboard.addEventListener("dragleave", dragLeave);
           dashboard.addEventListener("drop", drop);
           dashboard.addEventListener("dragend", dragEnd);
+
           dashboardGrid.appendChild(dashboard);
         });
+      }
+
+      function enableDragging(e) {
+        if (e.type === "touchstart") {
+          e.preventDefault();
+          this.parentNode.setAttribute("draggable", "true");
+        }
       }
 
       function dragStart(e) {
         draggedElement = this;
         setTimeout(() => this.classList.add("dragging"), 0);
+
+        // For touch events, set the drag data
+        if (e.type === "touchstart") {
+          const touch = e.changedTouches[0];
+          this.id = "dragging"; // Temporarily set id for dataTransfer
+          e.dataTransfer.setData('text/plain', this.id);
+        }
       }
 
       function dragOver(e) {
@@ -359,9 +353,7 @@
         e.preventDefault();
         this.classList.remove("drag-over");
         if (this !== draggedElement) {
-          const allDashboards = Array.from(
-            document.querySelectorAll(".dashboard"),
-          );
+          const allDashboards = Array.from(document.querySelectorAll(".dashboard"));
           const draggedIndex = allDashboards.indexOf(draggedElement);
           const droppedIndex = allDashboards.indexOf(this);
 
@@ -383,6 +375,10 @@
 
       function dragEnd(e) {
         this.classList.remove("dragging");
+        this.removeAttribute("draggable");
+        if (this.id === "dragging") {
+          this.removeAttribute("id");
+        }
         draggedElement = null;
       }
 
