@@ -27,7 +27,7 @@
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         text-align: center;
         position: relative;
-        cursor: default;
+        cursor: move; /* Indicates the entire card is draggable */
       }
       .dashboard .status-indicator {
         width: 15px;
@@ -42,32 +42,6 @@
       }
       .status.disconnected {
         background-color: red;
-      }
-      .grab-handle {
-        width: 20px;
-        height: 20px;
-        background-color: #ccc;
-        position: absolute;
-        top: 10px;
-        left: 30px;
-        border-radius: 3px;
-        cursor: move;
-        touch-action: none;
-      }
-      .grab-handle::before,
-      .grab-handle::after {
-        content: '';
-        position: absolute;
-        left: 5px;
-        right: 5px;
-        height: 2px;
-        background-color: #666;
-      }
-      .grab-handle::before {
-        top: 6px;
-      }
-      .grab-handle::after {
-        bottom: 6px;
       }
       .price,
       .pair,
@@ -109,11 +83,9 @@
         font-size: 0.9rem;
         margin-top: -15px;
       }
-      .dashboard.dragging {
+      .sortable-ghost {
         opacity: 0.5;
-      }
-      .dashboard.drag-over {
-        border: 2px dashed #666;
+        background-color: #f0f0f0;
       }
 
       /* Media query for smaller screens */
@@ -172,6 +144,7 @@
         }
       }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
   </head>
   <body>
     <h1>Bot Dashboard</h1>
@@ -263,7 +236,6 @@
 
           dashboard.innerHTML = `
             <div class="status-indicator status ${bot.status}"></div>
-            <div class="grab-handle" draggable="true"></div>
             <div class="pair">${bot.name}</div>
             <div class="price">Price: ${bot.current_price}</div>
             <div class="trades">Trades: ${bot.trades}</div>
@@ -278,84 +250,22 @@
             </div>
           `;
 
-          const grabHandle = dashboard.querySelector('.grab-handle');
-          grabHandle.addEventListener("mousedown", enableDragging);
-          grabHandle.addEventListener("touchstart", enableDragging, { passive: false });
-
-          dashboard.addEventListener("dragstart", dragStart);
-          dashboard.addEventListener("dragover", dragOver);
-          dashboard.addEventListener("dragenter", dragEnter);
-          dashboard.addEventListener("dragleave", dragLeave);
-          dashboard.addEventListener("drop", drop);
-          dashboard.addEventListener("dragend", dragEnd);
-
           dashboardGrid.appendChild(dashboard);
         });
-      }
 
-      function enableDragging(e) {
-        if (e.type === "touchstart") {
-          e.preventDefault();
-          this.parentNode.setAttribute("draggable", "true");
-        }
-      }
-
-      function dragStart(e) {
-        draggedElement = this;
-        setTimeout(() => this.classList.add("dragging"), 0);
-
-        // For touch events, set the drag data
-        if (e.type === "touchstart") {
-          const touch = e.changedTouches[0];
-          this.id = "dragging"; // Temporarily set id for dataTransfer
-          e.dataTransfer.setData('text/plain', this.id);
-        }
-      }
-
-      function dragOver(e) {
-        e.preventDefault();
-      }
-
-      function dragEnter(e) {
-        e.preventDefault();
-        this.classList.add("drag-over");
-      }
-
-      function dragLeave(e) {
-        this.classList.remove("drag-over");
-      }
-
-      function drop(e) {
-        e.preventDefault();
-        this.classList.remove("drag-over");
-        if (this !== draggedElement) {
-          const allDashboards = Array.from(document.querySelectorAll(".dashboard"));
-          const draggedIndex = allDashboards.indexOf(draggedElement);
-          const droppedIndex = allDashboards.indexOf(this);
-
-          if (draggedIndex > droppedIndex) {
-            this.parentNode.insertBefore(draggedElement, this);
-          } else {
-            this.parentNode.insertBefore(draggedElement, this.nextSibling);
+        // Initialize Sortable
+        new Sortable(dashboardGrid, {
+          animation: 150,
+          ghostClass: 'sortable-ghost',
+          onEnd: function (evt) {
+            const newOrder = {};
+            document.querySelectorAll(".dashboard").forEach((dashboard) => {
+              const botName = dashboard.getAttribute("data-bot-name");
+              newOrder[botName] = bots[botName];
+            });
+            bots = newOrder;
           }
-
-          // Update the order of bots object
-          const newOrder = {};
-          document.querySelectorAll(".dashboard").forEach((dashboard) => {
-            const botName = dashboard.getAttribute("data-bot-name");
-            newOrder[botName] = bots[botName];
-          });
-          bots = newOrder;
-        }
-      }
-
-      function dragEnd(e) {
-        this.classList.remove("dragging");
-        this.removeAttribute("draggable");
-        if (this.id === "dragging") {
-          this.removeAttribute("id");
-        }
-        draggedElement = null;
+        });
       }
 
       // Check each bot's last_updated time every 5 minutes
