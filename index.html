@@ -197,7 +197,7 @@
       let bots = {};
 
       // Setup WebSocket connection
-      const wsUrl = `wss://${window.location.host}:8080/ws`;
+      const wsUrl = `wss://${window.location.host}/ws`;
       let socket;
       let reconnectAttempts = 0;
       const maxReconnectDelay = 30000; // Maximum delay between reconnect attempts (30 seconds)
