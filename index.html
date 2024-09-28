@@ -263,8 +263,8 @@
             <div class="pair">${bot.name}</div>
             <div class="price">Price: ${bot.current_price}</div>
             <div class="trades">Trades: ${bot.trades}</div>
-            <div class="profit">Bot Profit: ${bot.profit}</div>
-            <div class="pnl">PnL: ${bot.pnl}</div>
+            <div class="profit">Bot Profit: $${bot.profit} (${bot.profit / bot.investment * 100}%)</div>
+            <div class="pnl">PnL: $${bot.pnl} (${bot.pnl / bot.investment * 100}%)</div>
             <div class="price-meter">
               <div class="price-indicator" style="width: ${priceIndicatorWidth}%;"></div>
             </div>
