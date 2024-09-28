@@ -42,6 +42,9 @@
       .status.disconnected {
         background-color: red;
       }
+      .status.loading {
+        background-color: cornflowerblue;
+      }
       .price,
       .pair,
       .profit,
@@ -143,14 +146,13 @@
         }
       }
       .drag-handle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  cursor: grab;
-  font-size: 20px;
-  color: #aaa;
-}
-
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: grab;
+        font-size: 20px;
+        color: #aaa;
+      }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
   </head>
@@ -162,6 +164,14 @@
 
     <script>
       let bots = {};
+
+      // Load bots from local storage if it exists
+      if (localStorage.getItem("bots")) {
+        bots = JSON.parse(localStorage.getItem("bots"));
+        Object.keys(bots).forEach((key) => {
+          updateOrAddBot(bots[key]); // Render the stored bots on the page
+        });
+      }
 
       // Setup WebSocket connection
       const wsUrl = `wss://${window.location.host}/ws`;
@@ -211,7 +221,7 @@
       function reconnectWithBackoff() {
         const delay = Math.min(
           1000 * Math.pow(2, reconnectAttempts),
-          maxReconnectDelay
+          maxReconnectDelay,
         );
         console.log(`Attempting to reconnect in ${delay}ms...`);
 
@@ -225,7 +235,7 @@
       function updateOrAddBot(bot) {
         const dashboardGrid = document.getElementById("dashboard-grid");
         let dashboard = document.querySelector(
-          `.dashboard[data-bot-name="${bot.name}"]`
+          `.dashboard[data-bot-name="${bot.name}"]`,
         );
 
         // Create a new dashboard card if it doesn't exist
@@ -268,7 +278,7 @@
       const dashboardGrid = document.getElementById("dashboard-grid");
       new Sortable(dashboardGrid, {
         animation: 150,
-        ghostClass: 'sortable-ghost',
+        ghostClass: "sortable-ghost",
         handle: ".drag-handle",
         onEnd: function (evt) {
           const newOrder = {};
@@ -277,11 +287,17 @@
             newOrder[botName] = bots[botName];
           });
           bots = newOrder;
+          let savedBots = bots;
+          for (const bot in savedBots) {
+            savedBots[bot]["status"] = 'loading';
+          }
+          // Save the updated bots to local storage
+          localStorage.setItem("bots", JSON.stringify(bots));
         },
-        onChoose: function(evt) {
+        onChoose: function (evt) {
           evt.item.style.opacity = 0.7;
         },
-        onUnchoose: function(evt) {
+        onUnchoose: function (evt) {
           evt.item.style.opacity = 1;
         },
         touchStartThreshold: 3, // Helps with mobile drag behavior
@@ -291,13 +307,13 @@
       setInterval(() => {
         Object.keys(bots).forEach((key) => {
           const bot = bots[key];
-          if (Date.now() - bot.last_updated > 300000) {
-            // If last update is older than 5 minutes, set status to disconnected
+          if (Date.now() - bot.last_updated > 30000) {
+            // If last update is older than 30 seconds, set status to disconnected
             bot.status = "disconnected";
             updateOrAddBot(bot);
           }
         });
-      }, 300000);
+      }, 10000);
 
       connectWebsocket(); // Initial WebSocket connection
     </script>
