@@ -307,8 +307,8 @@
       setInterval(() => {
         Object.keys(bots).forEach((key) => {
           const bot = bots[key];
-          if (Date.now() - bot.last_updated > 30000) {
-            // If last update is older than 30 seconds, set status to disconnected
+          if (Date.now() - bot.last_updated > 60000) {
+            // If last update is older than 60 seconds, set status to disconnected
             bot.status = "disconnected";
             updateOrAddBot(bot);
           }
