@@ -36,6 +36,17 @@
         top: 10px;
         left: 10px;
       }
+      .dashboard .remove-button {
+        position: absolute;
+        top: 6px;
+        left: 30px;
+        cursor: pointer;
+        font-size: 20px;
+        color: red;
+      }
+      .remove-button.hidden {
+        display: none;
+      }
       .status.connected {
         background-color: green;
       }
@@ -232,6 +243,15 @@
         }, delay);
       }
 
+      function removeBot(botName) {
+        delete bots[botName];
+        document
+          .querySelector(`.dashboard[data-bot-name="${botName}"]`)
+          .remove();
+        // Save the updated bots to local storage
+        localStorage.setItem("bots", JSON.stringify(bots));
+      }
+
       // Function to update or add a bot card without re-rendering the entire dashboard
       function updateOrAddBot(bot) {
         const dashboardGrid = document.getElementById("dashboard-grid");
@@ -259,6 +279,7 @@
 
         dashboard.innerHTML = `
             <div class="status-indicator status ${bot.status}"></div>
+            <div class="remove-button ${bot.status === 'connected' ? 'hidden' : ''}" onclick="removeBot('${bot.name}')">✕</div>
             <div class="drag-handle">⠿</div>
             <div class="pair">${bot.name}</div>
             <div class="price">Price: ${bot.current_price}</div>
