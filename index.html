@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trading Bot Dashboard</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      #dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        width: 100%;
+      }
+      .dashboard {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        position: relative;
+      }
+      .dashboard .status-indicator {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+      }
+      .dashboard .remove-button {
+        position: absolute;
+        top: 6px;
+        left: 30px;
+        cursor: pointer;
+        font-size: 20px;
+        color: red;
+      }
+      .remove-button.hidden {
+        display: none;
+      }
+      .status.connected {
+        background-color: green;
+      }
+      .status.disconnected {
+        background-color: red;
+      }
+      .status.loading {
+        background-color: cornflowerblue;
+      }
+      .price,
+      .pair,
+      .profit,
+      .pnl,
+      .trades {
+        font-size: 1.2rem;
+        margin: 10px 0;
+      }
+      .profit,
+      .pnl {
+        color: green;
+      }
+      .pair {
+        font-weight: bold;
+      }
+      .price-meter {
+        width: 100%;
+        height: 20px;
+        background-color: #ddd;
+        border-radius: 5px;
+        overflow: hidden;
+        margin: 20px 0;
+        position: relative;
+      }
+      .price-indicator {
+        height: 100%;
+        background-color: #4caf50;
+        border-radius: 5px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        transition: width 0.3s ease;
+      }
+      .meter-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        margin-top: -15px;
+      }
+      .sortable-ghost {
+        opacity: 0.5;
+        background-color: #f0f0f0;
+      }
+
+      /* Media query for smaller screens */
+      @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+        #dashboard-grid {
+          gap: 15px;
+        }
+        .dashboard {
+          padding: 15px;
+        }
+        .price,
+        .pair,
+        .profit,
+        .pnl,
+        .trades {
+          font-size: 1rem;
+        }
+        .price-meter {
+          margin: 15px 2px;
+          height: 15px;
+        }
+        .price-indicator {
+          height: 15px;
+        }
+        .meter-labels {
+          font-size: 0.8rem;
+          margin-top: -10px;
+        }
+      }
+
+      /* Media query for very small screens (e.g., smartphones) */
+      @media (max-width: 480px) {
+        .dashboard {
+          padding: 10px;
+        }
+        .price,
+        .pair,
+        .profit,
+        .pnl,
+        .trades {
+          font-size: 0.9rem;
+        }
+        .price-meter {
+          margin: 10px 2px;
+          height: 12px;
+        }
+        .price-indicator {
+          height: 12px;
+        }
+        .meter-labels {
+          font-size: 0.7rem;
+          margin-top: -10px;
+        }
+      }
+      .drag-handle {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: grab;
+        font-size: 20px;
+        color: #aaa;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+  </head>
+  <body>
+    <h1>Bot Dashboard</h1>
+
+    <!-- Grid layout for displaying bot stats -->
+    <div id="dashboard-grid"></div>
+
+    <script>
+      let bots = {};
+
+      // Load bots from local storage if it exists
+      if (localStorage.getItem("bots")) {
+        bots = JSON.parse(localStorage.getItem("bots"));
+        Object.keys(bots).forEach((key) => {
+          bots[key]["last_updated"] = Date.now();
+          updateOrAddBot(bots[key]); // Render the stored bots on the page
+        });
+      }
+
+      // Setup WebSocket connection
+      const wsUrl = `wss://${window.location.host}/ws`;
+      let socket;
+      let reconnectAttempts = 0;
+      const maxReconnectDelay = 30000; // Maximum delay between reconnect attempts (30 seconds)
+
+      function connectWebsocket() {
+        if (
+          socket &&
+          (socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING)
+        ) {
+          console.log("WebSocket is already connected or connecting.");
+          return;
+        }
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+          console.log("Connected to WebSocket server");
+          reconnectAttempts = 0; // Reset reconnection attempts on successful connection
+        };
+
+        // Handle incoming messages from the server
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          thisBot = data;
+          thisBot["last_updated"] = Date.now();
+          thisBot["status"] = "connected";
+          bots[thisBot.name] = thisBot;
+          updateOrAddBot(thisBot);
+        };
+
+        // Handle errors
+        socket.onerror = (error) => {
+          console.error("Websocket error occurred:", error);
+          reconnectWithBackoff();
+        };
+
+        // Handle connection close
+        socket.onclose = () => {
+          console.log("Disconnected from the WebSocket server");
+          reconnectWithBackoff();
+        };
+      }
+
+      function reconnectWithBackoff() {
+        const delay = Math.min(
+          1000 * Math.pow(2, reconnectAttempts),
+          maxReconnectDelay,
+        );
+        console.log(`Attempting to reconnect in ${delay}ms...`);
+
+        setTimeout(() => {
+          reconnectAttempts++;
+          connectWebsocket();
+        }, delay);
+      }
+
+      function removeBot(botName) {
+        delete bots[botName];
+        document
+          .querySelector(`.dashboard[data-bot-name="${botName}"]`)
+          .remove();
+        // Save the updated bots to local storage
+        localStorage.setItem("bots", JSON.stringify(bots));
+      }
+
+      // Function to update or add a bot card without re-rendering the entire dashboard
+      function updateOrAddBot(bot) {
+        const dashboardGrid = document.getElementById("dashboard-grid");
+        let dashboard = document.querySelector(
+          `.dashboard[data-bot-name="${bot.name}"]`,
+        );
+
+        // Create a new dashboard card if it doesn't exist
+        if (!dashboard) {
+          dashboard = document.createElement("div");
+          dashboard.className = "dashboard";
+          dashboard.setAttribute("data-bot-name", bot.name);
+          dashboardGrid.appendChild(dashboard);
+        }
+
+        let priceIndicatorWidth =
+          ((bot.current_price - bot.next_buy_order) /
+            (bot.next_sell_order - bot.next_buy_order)) *
+          100;
+        if (priceIndicatorWidth > 100) {
+          priceIndicatorWidth = 100;
+        } else if (priceIndicatorWidth < 0) {
+          priceIndicatorWidth = 0;
+        }
+
+        dashboard.innerHTML = `
+            <div class="status-indicator status ${bot.status}"></div>
+            <div class="remove-button ${bot.status === 'connected' ? 'hidden' : ''}" onclick="removeBot('${bot.name}')">✕</div>
+            <div class="drag-handle">⠿</div>
+            <div class="pair">${bot.name}</div>
+            <div class="price">Price: ${bot.current_price}</div>
+            <div class="trades">Trades: ${bot.trades}</div>
+            <div class="profit">Bot Profit: $${bot.profit.toFixed(2)} (${(bot.profit / bot.investment * 100).toFixed(2)}%)</div>
+            <div class="pnl">PnL: $${bot.pnl.toFixed(2)} (${(bot.pnl / bot.investment * 100).toFixed(2)}%)</div>
+            <div class="price-meter">
+              <div class="price-indicator" style="width: ${priceIndicatorWidth}%;"></div>
+            </div>
+            <div class="meter-labels">
+              <span class="next-buy">Buy: ${bot.next_buy_order}</span>
+              <span class="next-sell">Sell: ${bot.next_sell_order}</span>
+            </div>
+          `;
+      }
+
+      // Initialize Sortable
+      const dashboardGrid = document.getElementById("dashboard-grid");
+      new Sortable(dashboardGrid, {
+        animation: 150,
+        ghostClass: "sortable-ghost",
+        handle: ".drag-handle",
+        onEnd: function (evt) {
+          const newOrder = {};
+          document.querySelectorAll(".dashboard").forEach((dashboard) => {
+            const botName = dashboard.getAttribute("data-bot-name");
+            newOrder[botName] = bots[botName];
+          });
+          bots = newOrder;
+          let savedBots = bots;
+          for (const bot in savedBots) {
+            savedBots[bot]["status"] = 'loading';
+          }
+          // Save the updated bots to local storage
+          localStorage.setItem("bots", JSON.stringify(bots));
+        },
+        onChoose: function (evt) {
+          evt.item.style.opacity = 0.7;
+        },
+        onUnchoose: function (evt) {
+          evt.item.style.opacity = 1;
+        },
+        touchStartThreshold: 3, // Helps with mobile drag behavior
+      });
+
+      // Check each bot's last_updated time every 5 minutes
+      setInterval(() => {
+        Object.keys(bots).forEach((key) => {
+          const bot = bots[key];
+          if (Date.now() - bot.last_updated > 300000) {
+            // If last update is older than 5 minutes, set status to disconnected
+            bot.status = "disconnected";
+            updateOrAddBot(bot);
+          }
+        });
+      }, 10000);
+
+      connectWebsocket(); // Initial WebSocket connection
+    </script>
+  </body>
+</html>
