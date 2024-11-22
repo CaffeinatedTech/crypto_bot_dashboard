@@ -35,6 +35,7 @@ async def handle_bot_connection(request):
                         'next_sell_order': data['message']['next_sell'],
                         'trades': data['message']['trades'],
                         'investment': data['message']['investment'],
+                        'stats': data['message']['stats'],
                     }
                     bots[data['bot']] = this_bot
                     bots_changed.bot = this_bot
