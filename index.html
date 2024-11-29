@@ -20,6 +20,12 @@
         gap: 20px;
         width: 100%;
       }
+	  .profit-grid {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 2px;
+        width: 100%;
+	  } 
       .dashboard {
         background-color: white;
         padding: 20px;
@@ -68,6 +74,11 @@
       .pnl {
         color: green;
       }
+	  .profit-secondary {
+		  color: green;
+		  font-size: 0.9rem;
+		  margin: 10px 0;
+	  }
       .pair {
         font-weight: bold;
       }
@@ -119,6 +130,11 @@
         .trades {
           font-size: 1rem;
         }
+		.profit-secondary {
+            font-size: 0.7rem;
+            margin: 10px 0;
+			color: green;
+		}
         .price-meter {
           margin: 15px 2px;
           height: 15px;
@@ -254,6 +270,10 @@
 
       // Function to update or add a bot card without re-rendering the entire dashboard
       function updateOrAddBot(bot) {
+		  // Make sure the correct keys and values are in the bot.
+		if (!bot.hasOwnProperty('stats.average_daily_profit')) {
+    		bot.stats.average_daily_profit = 1;
+		}
         const dashboardGrid = document.getElementById("dashboard-grid");
         let dashboard = document.querySelector(
           `.dashboard[data-bot-name="${bot.name}"]`,
@@ -285,8 +305,11 @@
             <div class="price">Price: ${bot.current_price}</div>
             <div class="trades">Trades: ${bot.trades}</div>
             <div class="profit">Bot Profit: $${bot.profit.toFixed(2)} (${(bot.profit / bot.investment * 100).toFixed(2)}%)</div>
-			<div class="profit">Yesterday: $${bot.stats.yesterday_profit.toFixed(2)} (${(bot.stats.yesterday_profit / bot.investment * 100).toFixed(2)}%) ${bot.stats.trades_yesterday}</div>
 			<div class="profit">Today: $${bot.stats.daily_profit.toFixed(2)} (${(bot.stats.daily_profit / bot.investment * 100).toFixed(2)}%) ${bot.stats.trades_today}</div>
+			<div class="profit-grid">
+				<div class="profit-secondary">Yest: $${bot.stats.yesterday_profit.toFixed(2)} (${(bot.stats.yesterday_profit / bot.investment * 100).toFixed(2)}%) ${bot.stats.trades_yesterday}</div>
+				<div class="profit-secondary"> Avg: $${bot.stats.average_daily_profit.toFixed(2)} (${(bot.stats.average_daily_profit / bot.investment * 100).toFixed(2)}%)</div>
+            </div>
             <div class="pnl">PnL: $${bot.pnl.toFixed(2)} (${(bot.pnl / bot.investment * 100).toFixed(2)}%)</div>
             <div class="price-meter">
               <div class="price-indicator" style="width: ${priceIndicatorWidth}%;"></div>
