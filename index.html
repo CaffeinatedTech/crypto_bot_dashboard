@@ -270,10 +270,6 @@
 
       // Function to update or add a bot card without re-rendering the entire dashboard
       function updateOrAddBot(bot) {
-		  // Make sure the correct keys and values are in the bot.
-		if (!bot.hasOwnProperty('stats.average_daily_profit')) {
-    		bot.stats.average_daily_profit = 1;
-		}
         const dashboardGrid = document.getElementById("dashboard-grid");
         let dashboard = document.querySelector(
           `.dashboard[data-bot-name="${bot.name}"]`,
