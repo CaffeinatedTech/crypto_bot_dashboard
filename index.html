@@ -62,7 +62,10 @@
       .status.loading {
         background-color: cornflowerblue;
       }
-      .price,
+	  .price {
+          font-size: 1.2rem;
+          margin: 0 0;
+	  }
       .pair,
       .profit,
       .pnl,
@@ -88,7 +91,7 @@
         background-color: #ddd;
         border-radius: 5px;
         overflow: hidden;
-        margin: 2 0;
+        margin-bottom: 12px;
         position: relative;
       }
       .price-indicator {
@@ -192,6 +195,24 @@
 
     <script>
       let bots = {};
+
+	  // DEBUG
+	  debugBot = {
+          name: "DEBUG",
+          current_price: 0,
+          next_buy_order: 0,
+          next_sell_order: 0,
+          profit: 0,
+          pnl: 0,
+          trades: 0,
+		  stats: {
+    		  prices: [1,1,1,1,2,1,1,1,1,1],
+			  average_daily_profit: 0,
+			  daily_profit: 0,
+			  yesterday_profit: 0
+		  }
+	  }
+      // updateOrAddBot(debugBot);
 
       // Load bots from local storage if it exists
       if (localStorage.getItem("bots")) {
