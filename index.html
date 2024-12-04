@@ -182,6 +182,7 @@
       }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js" integrity="sha512-L0Shl7nXXzIlBSUUPpxrokqq4ojqgZFQczTYlGjzONGTDAcLremjwaWv5A+EDLnxhQzY5xUZPWLOLqYRkY0Cbw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   </head>
   <body>
     <h1>Bot Dashboard</h1>
@@ -298,15 +299,18 @@
             <div class="remove-button ${bot.status === 'connected' ? 'hidden' : ''}" onclick="removeBot('${bot.name}')">✕</div>
             <div class="drag-handle">⠿</div>
             <div class="pair">${bot.name}</div>
-            <div class="price">Price: ${bot.current_price}</div>
-            <div class="trades">Trades: ${bot.trades}</div>
-            <div class="profit">Bot Profit: $${bot.profit.toFixed(2)} (${(bot.profit / bot.investment * 100).toFixed(2)}%)</div>
+			  <!-- <div class="trades">Trades: ${bot.trades}</div> -->
+			<div class="profit"> Daily Avg: $${bot.stats.average_daily_profit.toFixed(2)} (${(bot.stats.average_daily_profit / bot.investment * 100).toFixed(2)}%)</div>
 			<div class="profit">Today: $${bot.stats.daily_profit.toFixed(2)} (${(bot.stats.daily_profit / bot.investment * 100).toFixed(2)}%) ${bot.stats.trades_today}</div>
+            <div class="profit">Bot Profit: $${bot.profit.toFixed(2)} (${(bot.profit / bot.investment * 100).toFixed(2)}%)</div>
 			<div class="profit-grid">
 				<div class="profit-secondary">Yest: $${bot.stats.yesterday_profit.toFixed(2)} (${(bot.stats.yesterday_profit / bot.investment * 100).toFixed(2)}%) ${bot.stats.trades_yesterday}</div>
-				<div class="profit-secondary"> Avg: $${bot.stats.average_daily_profit.toFixed(2)} (${(bot.stats.average_daily_profit / bot.investment * 100).toFixed(2)}%)</div>
+            <div class="profit-secondary">PnL: $${bot.pnl.toFixed(2)} (${(bot.pnl / bot.investment * 100).toFixed(2)}%)</div>
             </div>
-            <div class="pnl">PnL: $${bot.pnl.toFixed(2)} (${(bot.pnl / bot.investment * 100).toFixed(2)}%)</div>
+			<div class="price-chart">
+                <canvas id="priceChart-${bot.name}"></canvas>
+            </div>
+            <div class="price">Price: ${bot.current_price}</div>
             <div class="price-meter">
               <div class="price-indicator" style="width: ${priceIndicatorWidth}%;"></div>
             </div>
@@ -315,7 +319,43 @@
               <span class="next-sell">Sell: ${bot.next_sell_order}</span>
             </div>
           `;
+
+        // Update the price chart
+        if (bot.stats.prices) {
+          updatePriceChart(bot.name, bot.stats.prices);  
+        }
       }
+
+	  function updatePriceChart(botName, prices) {
+	    // Get the canvas element
+		  const canvas = document.getElementById(`priceChart-${botName}`);
+		  const ctx = canvas.getContext('2d');
+
+		  // Create a new chart or update the existing one
+		  if (window[`chart-${botName}`]) {
+			window[`chart-${botName}`].destroy();
+		  }
+
+		  window[`chart-${botName}`] = new Chart(ctx, {
+			type: 'line',
+			data: {
+			  labels: Array(prices.length).fill(''),
+			  datasets: [{
+				label: 'Price',
+				data: prices,
+				borderColor: 'rgba(255, 99, 132, 1)',
+				backgroundColor: 'rgba(255, 99, 132, 0.2)',
+			  }]
+			},
+			options: {
+			  scales: {
+				y: {
+				  beginAtZero: false
+				}
+			  }
+			}
+		  });
+	  }
 
       // Initialize Sortable
       const dashboardGrid = document.getElementById("dashboard-grid");
