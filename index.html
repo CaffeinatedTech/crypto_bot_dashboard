@@ -77,7 +77,7 @@
 	  .profit-secondary {
 		  color: green;
 		  font-size: 0.9rem;
-		  margin: 10px 0;
+		  margin: 0 0;
 	  }
       .pair {
         font-weight: bold;
@@ -88,7 +88,7 @@
         background-color: #ddd;
         border-radius: 5px;
         overflow: hidden;
-        margin: 20px 0;
+        margin: 2 0;
         position: relative;
       }
       .price-indicator {
@@ -132,7 +132,7 @@
         }
 		.profit-secondary {
             font-size: 0.7rem;
-            margin: 10px 0;
+            margin: 0 0;
 			color: green;
 		}
         .price-meter {
@@ -302,7 +302,7 @@
 			  <!-- <div class="trades">Trades: ${bot.trades}</div> -->
 			<div class="profit"> Daily Avg: $${bot.stats.average_daily_profit.toFixed(2)} (${(bot.stats.average_daily_profit / bot.investment * 100).toFixed(2)}%)</div>
 			<div class="profit">Today: $${bot.stats.daily_profit.toFixed(2)} (${(bot.stats.daily_profit / bot.investment * 100).toFixed(2)}%) ${bot.stats.trades_today}</div>
-            <div class="profit">Bot Profit: $${bot.profit.toFixed(2)} (${(bot.profit / bot.investment * 100).toFixed(2)}%)</div>
+            <div class="profit-secondary">Bot Profit: $${bot.profit.toFixed(2)} (${(bot.profit / bot.investment * 100).toFixed(2)}%)</div>
 			<div class="profit-grid">
 				<div class="profit-secondary">Yest: $${bot.stats.yesterday_profit.toFixed(2)} (${(bot.stats.yesterday_profit / bot.investment * 100).toFixed(2)}%) ${bot.stats.trades_yesterday}</div>
             <div class="profit-secondary">PnL: $${bot.pnl.toFixed(2)} (${(bot.pnl / bot.investment * 100).toFixed(2)}%)</div>
