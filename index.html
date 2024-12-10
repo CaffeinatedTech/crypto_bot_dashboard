@@ -269,15 +269,15 @@
           // Check the "prices" key to see if the last item is different from the current price
           if (bots[thisBot.name]["prices"] && bots[thisBot.name]["prices"].length > 0) {
             const lastItem = bots[thisBot.name]["prices"][bots[thisBot.name]["prices"].length - 1];
-            if (lastItem !== data["message"]["current_price"]) {
-              bots[thisBot.name]["prices"].push(data["message"]["current_price"]);
+            if (lastItem !== thisBot["current_price"]) {
+              bots[thisBot.name]["prices"].push(thisBot["current_price"]);
               // Make sure the prices array doesn't exceed 100 items
               if (bots[thisBot.name]["prices"].length > 100) {
                 bots[thisBot.name]["prices"].shift();
               }
             }
           } else {
-            bots[thisBot.name]["prices"] = [data["message"]["current_price"]];
+            bots[thisBot.name]["prices"] = [thisBot["current_price"]];
           }
 
           // bots[thisBot.name] = thisBot;
