@@ -251,8 +251,32 @@
           thisBot = data;
           thisBot["last_updated"] = Date.now();
           thisBot["status"] = "connected";
-          bots[thisBot.name] = thisBot;
-          updateOrAddBot(thisBot);
+          // Instead of overwriting the entire bot, just update the relevant fields
+          bots[thisBot.name]["name"] = thisBot.name;
+          bots[thisBot.name]["current_price"] = data["message"]["current_price"];
+          bots[thisBot.name]["next_buy_order"] = data["message"]["next_buy"];
+          bots[thisBot.name]["next_sell_order"] = data["message"]["next_sell"];
+          bots[thisBot.name]["profit"] = data["message"]["profit"];
+          bots[thisBot.name]["pnl"] = data["message"]["pnl"];
+          bots[thisBot.name]["trades"] = data["message"]["trades"];
+          bots[thisBot.name]["stats"] = data["stats"];
+
+          // Check the "prices" key to see if the last item is different from the current price
+          if (bots[thisBot.name]["prices"] && bots[thisBot.name]["prices"].length > 0) {
+            const lastItem = bots[thisBot.name]["prices"][bots[thisBot.name]["prices"].length - 1];
+            if (lastItem !== data["message"]["current_price"]) {
+              bots[thisBot.name]["prices"].push(data["message"]["current_price"]);
+              // Make sure the prices array doesn't exceed 100 items
+              if (bots[thisBot.name]["prices"].length > 100) {
+                bots[thisBot.name]["prices"].shift();
+              }
+            }
+          } else {
+            bots[thisBot.name]["prices"] = [data["message"]["current_price"]];
+          }
+
+          // bots[thisBot.name] = thisBot;
+          updateOrAddBot(bots[thisBot.name]);
         };
 
         // Handle errors
@@ -342,8 +366,8 @@
           `;
 
         // Update the price chart
-        if (bot.stats.prices) {
-          updatePriceChart(bot.name, bot.stats.prices);  
+        if (bot.prices) {
+          updatePriceChart(bot.name, bot.prices);  
         }
       }
 
