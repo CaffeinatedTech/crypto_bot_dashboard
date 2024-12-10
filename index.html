@@ -252,6 +252,9 @@
           thisBot["last_updated"] = Date.now();
           thisBot["status"] = "connected";
           // Instead of overwriting the entire bot, just update the relevant fields
+          if (!bots[thisBot.name]) {
+            bots[thisBot.name] = {};
+          }
           bots[thisBot.name]["name"] = thisBot.name;
           bots[thisBot.name]["current_price"] = data["message"]["current_price"];
           bots[thisBot.name]["next_buy_order"] = data["message"]["next_buy"];
@@ -260,6 +263,8 @@
           bots[thisBot.name]["pnl"] = data["message"]["pnl"];
           bots[thisBot.name]["trades"] = data["message"]["trades"];
           bots[thisBot.name]["stats"] = data["stats"];
+          bots[thisBot.name]["status"] = "connected";
+          bots[thisBot.name]["last_updated"] = Date.now();
 
           // Check the "prices" key to see if the last item is different from the current price
           if (bots[thisBot.name]["prices"] && bots[thisBot.name]["prices"].length > 0) {
