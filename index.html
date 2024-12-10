@@ -256,13 +256,13 @@
             bots[thisBot.name] = {};
           }
           bots[thisBot.name]["name"] = thisBot.name;
-          bots[thisBot.name]["current_price"] = data["message"]["current_price"];
-          bots[thisBot.name]["next_buy_order"] = data["message"]["next_buy"];
-          bots[thisBot.name]["next_sell_order"] = data["message"]["next_sell"];
-          bots[thisBot.name]["profit"] = data["message"]["profit"];
-          bots[thisBot.name]["pnl"] = data["message"]["pnl"];
-          bots[thisBot.name]["trades"] = data["message"]["trades"];
-          bots[thisBot.name]["stats"] = data["stats"];
+          bots[thisBot.name]["current_price"] = thisBot["current_price"];
+          bots[thisBot.name]["next_buy_order"] = thisBot["next_buy"];
+          bots[thisBot.name]["next_sell_order"] = thisBot["next_sell"];
+          bots[thisBot.name]["profit"] = thisBot["profit"];
+          bots[thisBot.name]["pnl"] = thisBot["pnl"];
+          bots[thisBot.name]["trades"] = thisBot["trades"];
+          bots[thisBot.name]["stats"] = thisBot["stats"];
           bots[thisBot.name]["status"] = "connected";
           bots[thisBot.name]["last_updated"] = Date.now();
 
