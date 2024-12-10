@@ -256,9 +256,10 @@
             bots[thisBot.name] = {};
           }
           bots[thisBot.name]["name"] = thisBot.name;
+          bots[thisBot.name]['investment'] = thisBot['investment'];
           bots[thisBot.name]["current_price"] = thisBot["current_price"];
-          bots[thisBot.name]["next_buy_order"] = thisBot["next_buy"];
-          bots[thisBot.name]["next_sell_order"] = thisBot["next_sell"];
+          bots[thisBot.name]["next_buy_order"] = thisBot["next_buy_order"];
+          bots[thisBot.name]["next_sell_order"] = thisBot["next_sell_order"];
           bots[thisBot.name]["profit"] = thisBot["profit"];
           bots[thisBot.name]["pnl"] = thisBot["pnl"];
           bots[thisBot.name]["trades"] = thisBot["trades"];
@@ -397,6 +398,11 @@
 			  }]
 			},
 			options: {
+        elements: {
+          point: {
+            radius: 0
+          }
+        },
 			  plugins: {
 				title: {
 			      display: false
