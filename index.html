@@ -536,11 +536,19 @@
           <span class="next-sell">Sell: ${bot.next_sell_order}</span>
         </div>`;
 
-      // Update the price chart
+      // Update stats card whenever a non-stats bot is updated
+      if (bot.name !== "__stats__") {
+        const statsBot = {
+          name: "__stats__",
+          status: "connected"
+        };
+        updateOrAddBot(statsBot);
+      }
+
+      // Update price chart if we have one
       if (bot.prices) {
         updatePriceChart(bot.name, bot.prices);
       }
-      updateAggregatedStats();
     }
 
     function updatePriceChart(botName, prices) {
