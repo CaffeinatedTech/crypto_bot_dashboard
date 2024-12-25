@@ -240,6 +240,7 @@
 
   <script>
     let bots = {};
+    let isInitialLoad = true;  // Add flag at the top level
 
     // Debug data for testing
     const debugBot = {
@@ -304,25 +305,13 @@
       // Load all bots into memory first
       bots = JSON.parse(localStorage.getItem("bots"));
       
-      // Check if we have a stats card in localStorage
-      let hasStats = false;
+      // Now render in the saved order using Object.entries() to preserve order
+      Object.entries(bots).forEach(([botName, bot]) => {
+        bot.status = botName === "__stats__" ? "connected" : "loading";
+        updateOrAddBot(bot);
+      });
       
-      // Now render in the saved order
-      for (const botName in bots) {
-        if (botName === "__stats__") {
-          hasStats = true;
-        }
-        bots[botName].status = botName === "__stats__" ? "connected" : "loading";
-        updateOrAddBot(bots[botName]);
-      }
-
-      // Add stats card if it wasn't in localStorage
-      if (!hasStats) {
-        updateOrAddBot({
-          name: "__stats__",
-          status: "connected"
-        });
-      }
+      isInitialLoad = false;  // Mark initial load as complete
     } else {
       // Add stats card for fresh start
       updateOrAddBot({
@@ -331,9 +320,11 @@
       });
       
       // Debug bots - uncomment for testing
-      // updateOrAddBot(debugBot);
-      // updateOrAddBot(debugBot2);
-      // updateOrAddBot(debugBot3);
+      updateOrAddBot(debugBot);
+      updateOrAddBot(debugBot2);
+      updateOrAddBot(debugBot3);
+      
+      isInitialLoad = false;  // Mark initial load as complete
     }
 
     // Setup WebSocket connection
@@ -394,8 +385,18 @@
           bots[thisBot.name]["prices"] = [thisBot["current_price"]];
         }
 
-        // bots[thisBot.name] = thisBot;
+        // Update the bot card
         updateOrAddBot(bots[thisBot.name]);
+
+        // Update stats card after bot update
+        const existingStatsBot = bots["__stats__"] || {
+          name: "__stats__",
+          status: "connected"
+        };
+        updateOrAddBot(existingStatsBot);
+
+        // Save to localStorage
+        localStorage.setItem("bots", JSON.stringify(bots));
       };
 
       // Handle errors
@@ -458,7 +459,19 @@
           dashboard.className += " aggregated";
         }
         dashboard.setAttribute("data-bot-name", bot.name);
-        dashboardGrid.appendChild(dashboard);
+        
+        // Find the correct position to insert the new dashboard
+        const botNames = Object.keys(bots);
+        const position = botNames.indexOf(bot.name);
+        const nextSibling = position < botNames.length - 1 
+          ? document.querySelector(`.dashboard[data-bot-name="${botNames[position + 1]}"]`)
+          : null;
+        
+        if (nextSibling) {
+          dashboardGrid.insertBefore(dashboard, nextSibling);
+        } else {
+          dashboardGrid.appendChild(dashboard);
+        }
       }
 
       // If this is the stats card, render it differently
@@ -536,16 +549,6 @@
           <span class="next-sell">Sell: ${bot.next_sell_order}</span>
         </div>`;
 
-      // Update stats card whenever a non-stats bot is updated
-      if (bot.name !== "__stats__") {
-        // Preserve existing stats card data and position
-        const existingStatsBot = bots["__stats__"] || {
-          name: "__stats__",
-          status: "connected"
-        };
-        updateOrAddBot(existingStatsBot);
-      }
-
       // Update price chart if we have one
       if (bot.prices) {
         updatePriceChart(bot.name, bot.prices);
@@ -605,19 +608,21 @@
       ghostClass: "sortable-ghost",
       handle: ".drag-handle",
       onEnd: function (evt) {
+        // Get the order of bots from the DOM
+        const orderedBotNames = Array.from(document.querySelectorAll(".dashboard")).map(
+          dashboard => dashboard.getAttribute("data-bot-name")
+        );
+        
+        // Create a new ordered object based on the DOM order
         const newOrder = {};
-        document.querySelectorAll(".dashboard").forEach((dashboard) => {
-          const botName = dashboard.getAttribute("data-bot-name");
+        orderedBotNames.forEach(botName => {
           newOrder[botName] = bots[botName];
-        });
-        bots = newOrder;
-        let savedBots = bots;
-        for (const bot in savedBots) {
-          if (bot !== "__stats__") {  // Don't change stats card status
-            savedBots[bot]["status"] = 'loading';
+          if (botName !== "__stats__") {
+            newOrder[botName].status = 'loading';
           }
-        }
-        // Save the updated bots to local storage
+        });
+        
+        bots = newOrder;
         localStorage.setItem("bots", JSON.stringify(bots));
       },
       onChoose: function (evt) {
