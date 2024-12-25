@@ -538,11 +538,12 @@
 
       // Update stats card whenever a non-stats bot is updated
       if (bot.name !== "__stats__") {
-        const statsBot = {
+        // Preserve existing stats card data and position
+        const existingStatsBot = bots["__stats__"] || {
           name: "__stats__",
           status: "connected"
         };
-        updateOrAddBot(statsBot);
+        updateOrAddBot(existingStatsBot);
       }
 
       // Update price chart if we have one
