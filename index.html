@@ -304,12 +304,24 @@
       // Load all bots into memory first
       bots = JSON.parse(localStorage.getItem("bots"));
       
+      // Check if we have a stats card in localStorage
+      let hasStats = false;
+      
       // Now render in the saved order
       for (const botName in bots) {
-        if (botName !== "__stats__") {
-          bots[botName].status = "loading";
+        if (botName === "__stats__") {
+          hasStats = true;
         }
+        bots[botName].status = botName === "__stats__" ? "connected" : "loading";
         updateOrAddBot(bots[botName]);
+      }
+
+      // Add stats card if it wasn't in localStorage
+      if (!hasStats) {
+        updateOrAddBot({
+          name: "__stats__",
+          status: "connected"
+        });
       }
     } else {
       // Add stats card for fresh start
