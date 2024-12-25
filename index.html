@@ -134,6 +134,18 @@
       background-color: #f0f0f0;
     }
 
+    .dashboard.aggregated {
+      background-color: #f8f9fa;
+      border: 2px solid #dee2e6;
+    }
+    
+    .dashboard.aggregated .stats-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
     /* Media query for smaller screens */
     @media (max-width: 768px) {
       body {
@@ -223,36 +235,93 @@
   <h1>Bot Dashboard</h1>
 
   <!-- Grid layout for displaying bot stats -->
-  <div id="dashboard-grid"></div>
+  <div id="dashboard-grid">
+  </div>
 
   <script>
     let bots = {};
 
-    // DEBUG
-    debugBot = {
-      name: "DEBUG",
-      current_price: 0,
-      next_buy_order: 0,
-      next_sell_order: 0,
-      profit: 0,
-      pnl: 0,
-      trades: 0,
+    // Debug data for testing
+    const debugBot = {
+      name: "BTC-USD",
+      current_price: 43750.25,
+      next_buy_order: 43500,
+      next_sell_order: 44000,
+      profit: 1250.75,
+      pnl: 850.25,
+      investment: 10000,
+      trades: 42,
+      status: "connected",
+      prices: [43720, 43740, 43735, 43750.25],
       stats: {
-        prices: [1, 1, 1, 1, 2, 1, 1, 1, 1, 1],
-        average_daily_profit: 0,
-        daily_profit: 0,
-        yesterday_profit: 0
+        average_daily_profit: 125.50,
+        daily_profit: 180.25,
+        trades_today: "8 trades",
+        yesterday_profit: 145.75
       }
     }
-    // updateOrAddBot(debugBot);
+
+    const debugBot2 = {
+      name: "ETH-USD",
+      current_price: 2280.50,
+      next_buy_order: 2250,
+      next_sell_order: 2300,
+      profit: 875.25,
+      pnl: 425.75,
+      investment: 8000,
+      trades: 38,
+      status: "connected",
+      prices: [2275, 2278, 2279, 2280.50],
+      stats: {
+        average_daily_profit: 85.25,
+        daily_profit: 95.50,
+        trades_today: "6 trades",
+        yesterday_profit: 88.25
+      }
+    }
+
+    const debugBot3 = {
+      name: "SOL-USD",
+      current_price: 112.75,
+      next_buy_order: 110,
+      next_sell_order: 115,
+      profit: 450.25,
+      pnl: 225.50,
+      investment: 5000,
+      trades: 45,
+      status: "connected",
+      prices: [112.25, 112.50, 112.60, 112.75],
+      stats: {
+        average_daily_profit: 45.25,
+        daily_profit: 55.75,
+        trades_today: "9 trades",
+        yesterday_profit: 42.50
+      }
+    }
 
     // Load bots from local storage if it exists
     if (localStorage.getItem("bots")) {
+      // Load all bots into memory first
       bots = JSON.parse(localStorage.getItem("bots"));
-      Object.keys(bots).forEach((key) => {
-        bots[key]["last_updated"] = Date.now();
-        updateOrAddBot(bots[key]); // Render the stored bots on the page
+      
+      // Now render in the saved order
+      for (const botName in bots) {
+        if (botName !== "__stats__") {
+          bots[botName].status = "loading";
+        }
+        updateOrAddBot(bots[botName]);
+      }
+    } else {
+      // Add stats card for fresh start
+      updateOrAddBot({
+        name: "__stats__",
+        status: "connected"
       });
+      
+      // Debug bots - uncomment for testing
+      // updateOrAddBot(debugBot);
+      // updateOrAddBot(debugBot2);
+      // updateOrAddBot(debugBot3);
     }
 
     // Setup WebSocket connection
@@ -350,10 +419,20 @@
         .remove();
       // Save the updated bots to local storage
       localStorage.setItem("bots", JSON.stringify(bots));
+      updateAggregatedStats();
+    }
+
+    // Function to calculate and update aggregated stats
+    function updateAggregatedStats() {
+      // This function is now handled by the stats pseudo-bot
+      return;
     }
 
     // Function to update or add a bot card without re-rendering the entire dashboard
     function updateOrAddBot(bot) {
+      // Add or update bot in the bots object
+      bots[bot.name] = bot;
+      
       const dashboardGrid = document.getElementById("dashboard-grid");
       let dashboard = document.querySelector(
         `.dashboard[data-bot-name="${bot.name}"]`,
@@ -363,8 +442,51 @@
       if (!dashboard) {
         dashboard = document.createElement("div");
         dashboard.className = "dashboard";
+        if (bot.name === "__stats__") {
+          dashboard.className += " aggregated";
+        }
         dashboard.setAttribute("data-bot-name", bot.name);
         dashboardGrid.appendChild(dashboard);
+      }
+
+      // If this is the stats card, render it differently
+      if (bot.name === "__stats__") {
+        // Get all bots except stats, using the bots object directly
+        const allBots = Object.values(bots).filter(b => b.name !== "__stats__");
+        
+        if (allBots.length === 0) {
+          dashboard.innerHTML = `
+            <div class="drag-handle">⠿</div>
+            <h2>Stats</h2>
+          `;
+          return;
+        }
+
+        const totalDailyProfit = allBots.reduce((sum, b) => sum + (b.stats?.daily_profit || 0), 0);
+        const totalInvestment = allBots.reduce((sum, b) => sum + (b.investment || 0), 0);
+        const averageDailyProfit = allBots.reduce((sum, b) => sum + (b.stats?.average_daily_profit || 0), 0);
+        const yesterdayProfit = allBots.reduce((sum, b) => sum + (b.stats?.yesterday_profit || 0), 0);
+        const activeBots = allBots.filter(b => b.status === 'connected').length;
+        
+        dashboard.innerHTML = `
+          <div class="drag-handle">⠿</div>
+          <h2>Stats (${activeBots}/${allBots.length})</h2>
+          <div class="stats-grid">
+            <div class="profit">
+              <strong>Daily Average:</strong><br>
+              $${averageDailyProfit.toFixed(2)} (${((averageDailyProfit / totalInvestment) * 100).toFixed(2)}%)
+            </div>
+            <div class="profit">
+              <strong>Profit Today:</strong><br>
+              $${totalDailyProfit.toFixed(2)} (${((totalDailyProfit / totalInvestment) * 100).toFixed(2)}%)
+            </div>
+            <div class="profit">
+              <strong>Yesterday:</strong><br>
+              $${yesterdayProfit.toFixed(2)} (${((yesterdayProfit / totalInvestment) * 100).toFixed(2)}%)
+            </div>
+          </div>
+        `;
+        return;
       }
 
       let priceIndicatorWidth =
@@ -406,6 +528,7 @@
       if (bot.prices) {
         updatePriceChart(bot.name, bot.prices);
       }
+      updateAggregatedStats();
     }
 
     function updatePriceChart(botName, prices) {
@@ -469,7 +592,9 @@
         bots = newOrder;
         let savedBots = bots;
         for (const bot in savedBots) {
-          savedBots[bot]["status"] = 'loading';
+          if (bot !== "__stats__") {  // Don't change stats card status
+            savedBots[bot]["status"] = 'loading';
+          }
         }
         // Save the updated bots to local storage
         localStorage.setItem("bots", JSON.stringify(bots));
